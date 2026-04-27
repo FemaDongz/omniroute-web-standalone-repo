@@ -32,7 +32,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect('/oauth-error?error=invalid_state');
     }
 
-    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/oauth/codex/callback`;
+    const appOrigin = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
+    const redirectUri = new URL('/api/oauth/codex/callback', appOrigin).toString();
 
     try {
       // Exchange code for token
