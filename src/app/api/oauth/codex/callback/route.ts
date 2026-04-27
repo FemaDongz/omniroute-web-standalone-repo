@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeCodexToken, getCodexUserInfo } from '@/lib/oauth/utils';
-import { getCallbackState, removeCallbackState } from '../start/route';
+import { getCallbackState, removeCallbackState } from '@/lib/oauth/callbackStateManager';
 
 export async function GET(req: NextRequest) {
   try {
