@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { generatePKCE, generateCodexAuthUrl } from '@/lib/oauth/utils';
+import { setOAuthCallbackState } from '@/lib/oauth/callbackStateManager';
 
 export async function GET(req: NextRequest) {
   try {
@@ -28,20 +29,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Persist PKCE data in short-lived cookies for callback verification.
-    response.cookies.set('codex_oauth_state', state, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 10 * 60,
-      path: '/',
-    });
-    response.cookies.set('codex_oauth_verifier', codeVerifier, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 10 * 60,
-      path: '/',
-    });
+    setOAuthCallbackState(response, state, codeVerifier);
 
     return response;
   } catch (error) {

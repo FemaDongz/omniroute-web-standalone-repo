@@ -1,13 +1,22 @@
-'use client';
-
-import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function OAuthError() {
-  const searchParams = useSearchParams();
-  const error = searchParams.get('error');
-  const message = searchParams.get('message');
-  const description = searchParams.get('description');
+type OAuthErrorPageProps = {
+  searchParams?: Promise<{
+    error?: string | string[];
+    message?: string | string[];
+    description?: string | string[];
+  }>;
+};
+
+function firstParam(value?: string | string[]) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function OAuthError({ searchParams }: OAuthErrorPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const error = firstParam(resolvedSearchParams?.error);
+  const message = firstParam(resolvedSearchParams?.message);
+  const description = firstParam(resolvedSearchParams?.description);
 
   return (
     <main style={{

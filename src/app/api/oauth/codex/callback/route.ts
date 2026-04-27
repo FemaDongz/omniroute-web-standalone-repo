@@ -5,6 +5,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeCodexToken, getCodexUserInfo } from '@/lib/oauth/utils';
+import {
+  clearOAuthCallbackState,
+  isOAuthCallbackStateValid,
+} from '@/lib/oauth/callbackStateManager';
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,9 +27,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect('/oauth-error?error=missing_code_or_state');
     }
 
-    const cookieState = req.cookies.get('codex_oauth_state')?.value;
-    const codeVerifier = req.cookies.get('codex_oauth_verifier')?.value;
-    if (!cookieState || cookieState !== state || !codeVerifier) {
+    const { isValid, codeVerifier } = isOAuthCallbackStateValid(req, state);
+    if (!isValid || !codeVerifier) {
       return NextResponse.redirect('/oauth-error?error=invalid_state');
     }
 
@@ -46,20 +49,7 @@ export async function GET(req: NextRequest) {
 
       // Store token in session/cookie
       const response = NextResponse.redirect('/');
-      response.cookies.set('codex_oauth_state', '', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 0,
-        path: '/',
-      });
-      response.cookies.set('codex_oauth_verifier', '', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 0,
-        path: '/',
-      });
+      clearOAuthCallbackState(response);
       response.cookies.set('oauth_token', tokens.access_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',

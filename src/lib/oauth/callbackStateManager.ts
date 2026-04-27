@@ -1,44 +1,59 @@
-/**
- * OAuth Callback State Manager
- * Manage state untuk OAuth flow
- */
+import type { NextRequest, NextResponse } from 'next/server';
 
-interface CallbackState {
-  codeVerifier: string;
-  state: string;
-  expiresAt: number;
+const STATE_COOKIE_NAME = 'codex_oauth_state';
+const VERIFIER_COOKIE_NAME = 'codex_oauth_verifier';
+const DEFAULT_STATE_MAX_AGE = 10 * 60;
+
+type CookieOptions = {
+  httpOnly: boolean;
+  secure: boolean;
+  sameSite: 'lax';
+  maxAge: number;
+  path: string;
+};
+
+function createCookieOptions(maxAge: number): CookieOptions {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge,
+    path: '/',
+  };
 }
 
-// Store callback state in memory (in production, use proper session store)
-const callbackStates = new Map<string, CallbackState>();
-
-// Clean up expired states setiap menit
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, value] of callbackStates.entries()) {
-    if (value.expiresAt < now) {
-      callbackStates.delete(key);
-    }
-  }
-}, 60000);
-
-/**
- * Store callback state
- */
-export function setCallbackState(state: string, data: Omit<CallbackState, 'state'>): void {
-  callbackStates.set(state, { ...data, state });
+export function setOAuthCallbackState(
+  response: NextResponse,
+  state: string,
+  codeVerifier: string,
+  maxAge = DEFAULT_STATE_MAX_AGE
+) {
+  response.cookies.set(STATE_COOKIE_NAME, state, createCookieOptions(maxAge));
+  response.cookies.set(VERIFIER_COOKIE_NAME, codeVerifier, createCookieOptions(maxAge));
 }
 
-/**
- * Get callback state
- */
-export function getCallbackState(state: string): CallbackState | undefined {
-  return callbackStates.get(state);
+export function clearOAuthCallbackState(response: NextResponse) {
+  response.cookies.set(STATE_COOKIE_NAME, '', createCookieOptions(0));
+  response.cookies.set(VERIFIER_COOKIE_NAME, '', createCookieOptions(0));
 }
 
-/**
- * Remove callback state
- */
-export function removeCallbackState(state: string): void {
-  callbackStates.delete(state);
+export function getOAuthCallbackState(req: NextRequest) {
+  return {
+    state: req.cookies.get(STATE_COOKIE_NAME)?.value ?? null,
+    codeVerifier: req.cookies.get(VERIFIER_COOKIE_NAME)?.value ?? null,
+  };
+}
+
+export function isOAuthCallbackStateValid(
+  req: NextRequest,
+  state: string | null | undefined
+) {
+  const cookieState = req.cookies.get(STATE_COOKIE_NAME)?.value ?? null;
+  const codeVerifier = req.cookies.get(VERIFIER_COOKIE_NAME)?.value ?? null;
+
+  return {
+    isValid: Boolean(cookieState && codeVerifier && state && cookieState === state),
+    cookieState,
+    codeVerifier,
+  };
 }
