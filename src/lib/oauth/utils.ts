@@ -4,6 +4,7 @@
  */
 
 import crypto from 'crypto';
+import type { NextRequest } from 'next/server';
 
 /**
  * Generate PKCE code challenge dan verifier
@@ -43,7 +44,9 @@ export function generateCodexAuthUrl(
     scope: 'openid profile email offline_access',
     code_challenge: codeChallenge,
     code_challenge_method: 'S256',
-    prompt: 'consent',
+    id_token_add_organizations: 'true',
+    codex_cli_simplified_flow: 'true',
+    originator: process.env.CODEX_OAUTH_ORIGINATOR || 'codex_cli_rs',
   });
 
   if (state) {
@@ -51,6 +54,20 @@ export function generateCodexAuthUrl(
   }
 
   return `https://auth.openai.com/oauth/authorize?${params.toString()}`;
+}
+
+/**
+ * Resolve the public callback URL used for the Codex OAuth flow.
+ * On Vercel, prefer an explicit deployed URL so the redirect URI stays stable.
+ */
+export function getCodexRedirectUri(req: NextRequest): string {
+  const explicitRedirectUri = process.env.CODEX_OAUTH_REDIRECT_URI?.trim();
+  if (explicitRedirectUri) {
+    return explicitRedirectUri;
+  }
+
+  const appOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim() || req.nextUrl.origin;
+  return new URL('/api/oauth/codex/callback', appOrigin).toString();
 }
 
 /**

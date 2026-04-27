@@ -5,18 +5,39 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { generatePKCE, generateCodexAuthUrl } from '@/lib/oauth/utils';
+import { generatePKCE, generateCodexAuthUrl, getCodexRedirectUri } from '@/lib/oauth/utils';
 import { setOAuthCallbackState } from '@/lib/oauth/callbackStateManager';
 
 export async function GET(req: NextRequest) {
   try {
     const { codeVerifier, codeChallenge } = generatePKCE();
     const state = Math.random().toString(36).substring(7);
-    const appOrigin = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
-    const redirectUri = new URL('/api/oauth/codex/callback', appOrigin).toString();
+    const redirectUri = getCodexRedirectUri(req);
+    const clientId = process.env.CODEX_CLIENT_ID;
+
+    if (
+      process.env.NODE_ENV === 'production' &&
+      !process.env.CODEX_OAUTH_REDIRECT_URI &&
+      !process.env.NEXT_PUBLIC_APP_URL
+    ) {
+      console.warn(
+        '[ArcvourHUB][CodexOAuth][WARN] Missing CODEX_OAUTH_REDIRECT_URI or NEXT_PUBLIC_APP_URL in production; redirect_uri will fall back to the request origin.'
+      );
+    }
+
+    if (!clientId) {
+      console.error('[ArcvourHUB][CodexOAuth][ERROR] Missing CODEX_CLIENT_ID');
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Missing CODEX_CLIENT_ID environment variable.',
+        },
+        { status: 500 }
+      );
+    }
 
     const authUrl = generateCodexAuthUrl(
-      process.env.CODEX_CLIENT_ID || 'app_EMoamEEZ73f0CkXaXp7hrann',
+      clientId,
       redirectUri,
       codeChallenge,
       state

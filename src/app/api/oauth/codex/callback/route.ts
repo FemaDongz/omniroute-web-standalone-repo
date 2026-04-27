@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { exchangeCodexToken, getCodexUserInfo } from '@/lib/oauth/utils';
+import { exchangeCodexToken, getCodexUserInfo, getCodexRedirectUri } from '@/lib/oauth/utils';
 import {
   clearOAuthCallbackState,
   isOAuthCallbackStateValid,
@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
     const code = searchParams.get('code');
     const state = searchParams.get('state');
     const error = searchParams.get('error');
+    const clientId = process.env.CODEX_CLIENT_ID;
 
     if (error) {
       return NextResponse.redirect(
@@ -32,16 +33,20 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect('/oauth-error?error=invalid_state');
     }
 
-    const appOrigin = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
-    const redirectUri = new URL('/api/oauth/codex/callback', appOrigin).toString();
+    const redirectUri = getCodexRedirectUri(req);
 
     try {
+      if (!clientId) {
+        console.error('[ArcvourHUB][CodexOAuth][ERROR] Missing CODEX_CLIENT_ID');
+        return NextResponse.redirect('/oauth-error?error=missing_codex_client_id');
+      }
+
       // Exchange code for token
       const tokens = await exchangeCodexToken(
         code,
         redirectUri,
         codeVerifier,
-        process.env.CODEX_CLIENT_ID || 'app_EMoamEEZ73f0CkXaXp7hrann',
+        clientId,
         process.env.CODEX_CLIENT_SECRET
       );
 

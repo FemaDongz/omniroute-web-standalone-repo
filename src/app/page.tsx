@@ -70,7 +70,16 @@ export default function Home() {
                     className="btn-primary mt-2"
                     onClick={async () => {
                       const res = await fetch('/api/oauth/codex/start');
+                      if (!res.ok) {
+                        const data = await res.json().catch(() => null);
+                        alert(data?.error || 'Failed to start OAuth flow.');
+                        return;
+                      }
                       const data = await res.json();
+                      if (!data?.authUrl) {
+                        alert('OAuth flow did not return an authorization URL.');
+                        return;
+                      }
                       window.location.href = data.authUrl;
                     }}
                   >

@@ -45,6 +45,9 @@ OLLAMA_BASE_URL=http://localhost:11434
 
 # App URL
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Optional: Explicit OAuth callback URL for Vercel / custom domains
+CODEX_OAUTH_REDIRECT_URI=https://your-domain.vercel.app/api/oauth/codex/callback
 ```
 
 ### 3. Run Development Server
@@ -82,6 +85,10 @@ vercel
 ```
 
 Set environment variables di Vercel dashboard.
+
+Untuk Codex OAuth, pastikan `CODEX_OAUTH_REDIRECT_URI` diisi dengan URL callback publik yang
+persis sama dengan yang terdaftar di OpenAI OAuth app. Jika kamu pakai preview domain Vercel,
+URL callback juga harus ikut diganti atau kamu harus memakai custom domain yang stabil.
 
 ### Self-Hosted (Node.js)
 
@@ -207,6 +214,7 @@ web-standalone/
 | `OPENROUTER_API_KEY` | No | OpenRouter API key |
 | `OLLAMA_BASE_URL` | No | Ollama server URL (default: localhost:11434) |
 | `NEXT_PUBLIC_APP_URL` | No | App URL untuk OAuth callback |
+| `CODEX_OAUTH_REDIRECT_URI` | No | Full callback URL untuk deployment publik |
 | `NODE_ENV` | No | Environment (development/production) |
 
 ## Troubleshooting
@@ -215,6 +223,7 @@ web-standalone/
 
 - Check `CODEX_CLIENT_ID` di `.env.local`
 - Pastikan `NEXT_PUBLIC_APP_URL` sesuai dengan deployed URL
+- Jika deploy ke Vercel, set `CODEX_OAUTH_REDIRECT_URI` ke callback publik yang exact
 - Verify OAuth app settings di OpenAI console
 
 ### Chat API error 401
