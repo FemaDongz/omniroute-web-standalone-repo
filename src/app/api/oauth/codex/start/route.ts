@@ -12,7 +12,8 @@ export async function GET(req: NextRequest) {
   try {
     const { codeVerifier, codeChallenge } = generatePKCE();
     const state = Math.random().toString(36).substring(7);
-    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/oauth/codex/callback`;
+    const appOrigin = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
+    const redirectUri = new URL('/api/oauth/codex/callback', appOrigin).toString();
 
     const authUrl = generateCodexAuthUrl(
       process.env.CODEX_CLIENT_ID || 'app_EMoamEEZ73f0CkXaXp7hrann',
