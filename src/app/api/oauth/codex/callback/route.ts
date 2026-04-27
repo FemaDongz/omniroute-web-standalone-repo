@@ -5,7 +5,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeCodexToken, getCodexUserInfo } from '@/lib/oauth/utils';
-import { getCallbackState, removeCallbackState } from '@/lib/oauth/callbackStateManager';
 
 export async function GET(req: NextRequest) {
   try {
@@ -24,9 +23,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect('/oauth-error?error=missing_code_or_state');
     }
 
-    // Get stored state
-    const storedState = getCallbackState(state);
-    if (!storedState) {
+    const cookieState = req.cookies.get('codex_oauth_state')?.value;
+    const codeVerifier = req.cookies.get('codex_oauth_verifier')?.value;
+    if (!cookieState || cookieState !== state || !codeVerifier) {
       return NextResponse.redirect('/oauth-error?error=invalid_state');
     }
 
@@ -37,7 +36,7 @@ export async function GET(req: NextRequest) {
       const tokens = await exchangeCodexToken(
         code,
         redirectUri,
-        storedState.codeVerifier,
+        codeVerifier,
         process.env.CODEX_CLIENT_ID || 'app_EMoamEEZ73f0CkXaXp7hrann',
         process.env.CODEX_CLIENT_SECRET
       );
@@ -45,11 +44,22 @@ export async function GET(req: NextRequest) {
       // Get user info
       const userInfo = await getCodexUserInfo(tokens.access_token);
 
-      // Clean up state
-      removeCallbackState(state);
-
       // Store token in session/cookie
       const response = NextResponse.redirect('/');
+      response.cookies.set('codex_oauth_state', '', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 0,
+        path: '/',
+      });
+      response.cookies.set('codex_oauth_verifier', '', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 0,
+        path: '/',
+      });
       response.cookies.set('oauth_token', tokens.access_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
